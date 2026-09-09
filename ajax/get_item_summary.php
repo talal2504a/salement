@@ -1,17 +1,16 @@
 <?php
 // ajax/get_item_summary.php — Dashboard item summary card
-// FIXED 2026-09-09: stock_in/stock_out tables (NOT stock_ledger which doesn't exist)
-// + Plate/Pallet count per item added
+// FIXED 2026-09-09: stock_in/stock_out (GREATEST clamp → negative kabhi nahi)
 header('Content-Type: application/json');
 require_once '../config/db.php';
 
 // ---- Per-item summary from stock_in / stock_out ----
 $sql = "SELECT i.id, i.name, i.category,
-        COALESCE(si.fresh_in, 0)  - COALESCE(so_out.fresh_out, 0)     AS fresh_qty,
-        COALESCE(si.damaged_in,0) - COALESCE(so_out.damaged_out, 0)   AS damaged_qty,
-        (COALESCE(si.total_in,0) - COALESCE(so_out.total_out,0))      AS total_qty,
-        COALESCE(si.total_in,0)                                       AS physical_in,
-        COALESCE(so_out.total_out,0)                                  AS physical_out
+        GREATEST(COALESCE(si.fresh_in, 0)  - COALESCE(so_out.fresh_out, 0), 0)   AS fresh_qty,
+        GREATEST(COALESCE(si.damaged_in,0) - COALESCE(so_out.damaged_out, 0), 0) AS damaged_qty,
+        GREATEST((COALESCE(si.total_in,0)  - COALESCE(so_out.total_out,0)),  0)  AS total_qty,
+        GREATEST(COALESCE(si.total_in, 0), 0)                                    AS physical_in,
+        COALESCE(so_out.total_out,0)                                             AS physical_out
         FROM items i
         LEFT JOIN (
             SELECT item_id,
@@ -50,12 +49,12 @@ while ($row = $result->fetch_assoc()) {
     $fresh_qty      = (int)$row['fresh_qty'];
     $damaged_qty    = (int)$row['damaged_qty'];
     $total_qty      = (int)$row['total_qty'];
-    $physical_total = (int)$row['physical_in'] - (int)$row['physical_out'];
+    $physical_total = max((int)$row['physical_in'] - (int)$row['physical_out'], 0);
 
-    // Plate count = available plates (pallets In minus plates Out)
+    // Plate count = available plates (pallets In minus plates Out) — kabhi negative nahi
     $stmt = $conn->prepare(
-        "SELECT (SELECT COUNT(*) FROM stock_in WHERE item_id = ? AND notes LIKE 'Pallet:%')
-              - (SELECT COALESCE(SUM(plates), 0) FROM stock_out WHERE item_id = ?) AS plate_count"
+        "SELECT GREATEST((SELECT COUNT(*) FROM stock_in WHERE item_id = ? AND notes LIKE 'Pallet:%')
+              - (SELECT COALESCE(SUM(plates), 0) FROM stock_out WHERE item_id = ?), 0) AS plate_count"
     );
     $stmt->bind_param("ii", $row['id'], $row['id']);
     $stmt->execute();
@@ -76,10 +75,10 @@ while ($row = $result->fetch_assoc()) {
     ];
 
     $totals['total_items']++;
-    $totals['total_qty']      += $total_qty;
-    $totals['total_physical'] += $physical_total;
-    $totals['total_fresh']    += $fresh_qty;
-    $totals['total_damaged']  += $damaged_qty;
+    $totals['total_qty']      += max($total_qty, 0);
+    $totals['total_physical'] += max($physical_total, 0);
+    $totals['total_fresh']    += max($fresh_qty, 0);
+    $totals['total_damaged']  += max($damaged_qty, 0);
 }
 
 echo json_encode(['success' => true, 'items' => $items, 'totals' => $totals]);

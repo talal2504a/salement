@@ -18,8 +18,10 @@ $stmt = $conn->prepare(
 );
 $stmt->bind_param("iis", $item_id, $qty, $notes);
 if ($stmt->execute()) {
-    $conn->prepare("UPDATE items SET pcs_per_plate = ? WHERE id = ?")
-        ->bind_param("ii", $qty, $item_id)->execute();
+    $stmt2 = $conn->prepare("UPDATE items SET pcs_per_plate = ? WHERE id = ?");
+    $stmt2->bind_param("ii", $qty, $item_id);
+    $stmt2->execute();
+    $stmt2->close();
     echo json_encode(['success' => true, 'id' => $stmt->insert_id]);
 } else {
     echo json_encode(['success' => false, 'message' => $stmt->error]);
