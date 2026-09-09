@@ -1,0 +1,208 @@
+/* ============================================================
+   SHARED STYLESHEET
+   Har page isko <link> karta hai taake design consistent rahe.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+    --navy:#1C2333;
+    --navy-2:#262E42;
+    --amber:#E8A33D;
+    --amber-dim:#F3D9A8;
+    --bg:#F6F4EF;
+    --panel:#FFFFFF;
+    --line:#E4E1D8;
+    --text:#232722;
+    --muted:#767C74;
+    --green:#4C8F63;
+    --green-bg:#E9F3EC;
+    --rust:#BD5B3D;
+    --rust-bg:#FBE9E2;
+    --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.num,.mono{font-family:'Sora',sans-serif;}
+
+.app{min-height:100vh;}
+
+/* ---------------- SIDEBAR ---------------- */
+.sidebar{
+    width:220px;background:var(--navy);color:#fff;flex-shrink:0;
+    padding:24px 0;display:flex;flex-direction:column;
+    position:fixed;top:0;left:0;height:100vh;overflow-y:auto;
+}
+.brand{padding:0 20px 22px 20px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:14px;}
+.brand .mark{
+    width:34px;height:34px;border-radius:8px;background:var(--amber);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Sora',sans-serif;font-weight:700;color:var(--navy);margin-bottom:10px;
+}
+.brand .name{font-family:'Sora',sans-serif;font-weight:600;font-size:15px;}
+.brand .sub{font-size:11.5px;color:rgba(255,255,255,0.5);margin-top:2px;}
+nav{display:flex;flex-direction:column;padding:0 10px;gap:2px;}
+.nav-item{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;
+    color:rgba(255,255,255,0.68);font-size:13.5px;font-weight:500;text-decoration:none;
+}
+.nav-item:hover{background:rgba(255,255,255,0.06);color:#fff;}
+.nav-item.active{background:rgba(232,163,61,0.14);color:var(--amber);}
+.nav-item .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:0.7;flex-shrink:0;}
+.sidebar-foot{margin-top:auto;padding:14px 20px 0 20px;border-top:1px solid rgba(255,255,255,0.1);font-size:11px;color:rgba(255,255,255,0.4);}
+
+/* ---------------- MAIN LAYOUT ---------------- */
+main{margin-left:220px;padding:28px 34px 60px 34px;box-sizing:border-box;width:calc(100% - 220px);max-width:1500px;}
+.pagehead{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+.pagehead h1{font-size:22px;font-weight:600;margin:0 0 4px 0;}
+.pagehead .desc{color:var(--muted);font-size:13.5px;margin:0;}
+
+.btn{
+    background:var(--navy);color:#fff;border:none;padding:10px 18px;border-radius:8px;
+    font-size:13.5px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;
+}
+.btn.amber{background:var(--amber);color:var(--navy);font-weight:600;}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text);}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+/* ---------------- CARDS / STATS ---------------- */
+.stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
+.stat-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;}
+.stat-card .label{font-size:12px;color:var(--muted);margin-bottom:8px;}
+.stat-card .value{font-size:26px;font-weight:600;}
+.stat-card .value.amber{color:var(--amber);}
+.stat-card .value.green{color:var(--green);}
+.stat-card .value.rust{color:var(--rust);}
+.stat-card .foot{font-size:11.5px;color:var(--muted);margin-top:6px;}
+
+.grid-2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;}
+.panel h3{font-size:14.5px;margin:0 0 14px 0;font-weight:600;}
+.panel h3 span{font-weight:400;color:var(--muted);font-size:12.5px;}
+
+/* ---------------- TABLES ---------------- */
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;font-size:11px;color:var(--muted);font-weight:500;padding:0 10px 8px 10px;border-bottom:1px solid var(--line);}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+.num-cell{text-align:right;font-family:'Sora',sans-serif;}
+.tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+.tag.ok{background:var(--green-bg);color:var(--green);}
+.tag.low{background:var(--rust-bg);color:var(--rust);}
+.tag.pending{background:#FCEBD4;color:#9C6A15;}
+.in-txt{color:var(--green);font-weight:600;}
+.out-txt{color:var(--rust);font-weight:600;}
+.dash{color:var(--muted);}
+
+.item-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);}
+.item-row:last-child{border-bottom:none;}
+.item-row .name{font-size:13px;font-weight:500;}
+.item-row .meta{font-size:11.5px;color:var(--muted);}
+.item-row .right{text-align:right;}
+.item-row .right .qty{font-family:'Sora',sans-serif;font-weight:600;}
+
+/* ---------------- FORMS ---------------- */
+.form-wrap{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.form-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;font-weight:500;}
+.field input, .field select{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+    font-size:13.5px;font-family:'Inter',sans-serif;background:#FCFBF8;
+}
+.split-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.cond-toggle{display:flex;gap:8px;margin-bottom:16px;}
+.cond-toggle button{
+    flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--line);background:#fff;
+    font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);
+}
+.cond-toggle button.fresh-on{border-color:var(--green);color:var(--green);background:var(--green-bg);}
+.cond-toggle button.dmg-on{border-color:var(--rust);color:var(--rust);background:var(--rust-bg);}
+.helper-note{
+    background:#FCF6EA;border:1px solid var(--amber-dim);border-radius:8px;
+    padding:12px 14px;font-size:12.5px;color:#7A5A1B;margin-top:6px;line-height:1.5;
+}
+.msg-box{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;}
+.msg-box.success{background:var(--green-bg);color:var(--green);display:block;}
+.msg-box.error{background:var(--rust-bg);color:var(--rust);display:block;}
+
+/* ---------------- PENDING ALERT (stockout page) ---------------- */
+.pending-alert{background:#FCEBD4;border:1px solid #EFC583;border-radius:10px;padding:14px 16px;margin-bottom:18px;display:none;}
+.pending-alert .title{font-size:13px;font-weight:600;color:#7A5410;margin-bottom:10px;}
+.pending-alert .order{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:12.5px;}
+.pending-alert .order:last-child{margin-bottom:0;}
+.pending-alert .order .meta{color:var(--muted);}
+.pending-alert .order button{background:var(--navy);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;}
+
+/* ---------------- ITEM LEDGER ---------------- */
+.ledger-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.item-select{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);padding:10px 16px;border-radius:9px;font-size:14px;font-weight:600;}
+.item-select select{border:none;background:none;font-family:'Sora',sans-serif;font-weight:600;font-size:14px;color:var(--navy);}
+.ledger-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+.ledger-summary .box{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:14px 16px;}
+.ledger-summary .box .l{font-size:11.5px;color:var(--muted);margin-bottom:6px;}
+.ledger-summary .box .v{font-size:20px;font-weight:600;}
+
+/* ---------------- PENDING DELIVERIES PAGE ---------------- */
+.pd-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0;overflow:hidden;margin-bottom:14px;}
+.pd-card .head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#FAF8F3;border-bottom:1px solid var(--line);}
+.pd-card .head .party{font-size:14px;font-weight:600;}
+.pd-card .head .count{font-size:12px;color:var(--muted);}
+.pd-card .body{padding:6px 18px;}
+.pd-line{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:10px;}
+.pd-line:last-child{border-bottom:none;}
+.pd-line .l-name{font-size:13px;font-weight:500;}
+.pd-line .l-order{font-size:11.5px;color:var(--muted);}
+.pd-line .progress-wrap{width:160px;}
+.progress-bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-bottom:5px;}
+.progress-bar .fill{height:100%;background:var(--amber);}
+.progress-txt{font-size:11px;color:var(--muted);text-align:right;}
+.pd-line .actions{display:flex;align-items:center;gap:10px;}
+.pd-line button{background:var(--navy);color:#fff;border:none;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;}
+/* CHANGED (2026-09-08 v2): Update/Cancel buttons ka naya style */
+/* Ander white (bg), bahar black (border), hover pe color change */
+.pd-line button.btn-update,
+.pd-line button.btn-cancel{
+    background:#fff;color:#000;border:2px solid #000;font-weight:600;
+}
+.pd-line button.btn-update:hover{background:#E8A33D;border-color:#E8A33D;color:#fff;}
+.pd-line button.btn-cancel:hover{background:#D32F2F;border-color:#D32F2F;color:#fff;}
+/* Deliver button - ORIGINAL style (waisa hi jaisa pehle tha) */
+.pd-line button:not(.btn-update):not(.btn-cancel){background:var(--navy);color:#fff;border:none;}
+.empty-note{color:var(--muted);font-size:13px;padding:20px;text-align:center;}
+
+/* ---------------- MODAL (Deliver form popup) ---------------- */
+.modal-overlay{
+    display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(28,35,51,0.55);z-index:100;
+    align-items:center;justify-content:center;
+}
+.modal-overlay.open{display:flex;}
+.modal-box{
+    background:#fff;border-radius:12px;padding:22px;width:340px;max-width:90vw;
+    box-shadow:0 20px 50px rgba(0,0,0,0.2);
+}
+.modal-box h3{margin:0 0 4px 0;font-size:15px;}
+.modal-box .modal-sub{font-size:12px;color:var(--muted);margin-bottom:16px;}
+.modal-actions{display:flex;gap:10px;margin-top:6px;}
+.modal-actions .btn{flex:1;}
+
+/* ---------------- HISTORY LIST (inside pending card) ---------------- */
+.history-box{
+    background:#FAF8F3;border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;margin:0 0 10px 0;font-size:12px;display:none;
+}
+.history-box.open{display:block;}
+.history-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);}
+.history-row:last-child{border-bottom:none;}
+.history-row .h-meta{color:var(--muted);}
+.link-btn{
+    background:none;border:none;color:var(--navy);font-size:11.5px;font-weight:600;
+    text-decoration:underline;cursor:pointer;padding:0;
+}
