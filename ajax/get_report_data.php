@@ -114,6 +114,15 @@ switch ($report) {
         }
         break;
 
+    case 'activity':
+        $headers = ['User', 'Action', 'Details', 'Time'];
+        $num_cols = [];
+        $q = $conn->query("SELECT user_name, action, details, created_at FROM activity_log ORDER BY id DESC");
+        while ($r = $q->fetch_assoc()) {
+            $rows[] = ['cells' => [$r['user_name'], $r['action'], $r['details'], $r['created_at']]];
+        }
+        break;
+
     default:
         echo json_encode(['success' => false, 'message' => 'Report nahi mili']);
         $conn->close();

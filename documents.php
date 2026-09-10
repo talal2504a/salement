@@ -1,6 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit; }
+$active_page = 'documents';
 ?>
 <!DOCTYPE html>
 <html lang="ur-PK">
@@ -71,6 +72,12 @@ table.doc-table td:first-child{width:30px;}
                     <div class="doc-options show">
                         <button class="doc-opt" data-report="orders" onclick="loadReport(this)">Orders</button>
                         <button class="doc-opt" data-report="delivery" onclick="loadReport(this)">Delivery History</button>
+                    </div>
+                </div>
+                <div class="doc-group">
+                    <div class="doc-group-title" onclick="toggleGroup(this)">System <span class="arrow">▼</span></div>
+                    <div class="doc-options show">
+                        <button class="doc-opt" data-report="activity" onclick="loadReport(this)">Activity Log</button>
                     </div>
                 </div>
             </div>

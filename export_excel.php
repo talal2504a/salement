@@ -16,6 +16,7 @@ $titles = [
     'parties'     => 'Parties List',
     'orders'      => 'Orders',
     'delivery'    => 'Delivery History',
+    'activity'    => 'Activity Log',
 ];
 $title = $titles[$report] ?? 'Report';
 
@@ -158,6 +159,18 @@ switch ($report) {
         while ($r = $q->fetch_assoc()) {
             if ($sel !== '' && strpos(',' . $sel . ',', ',' . $i . ',') === false) { $i++; continue; }
             $rows[] = [$r['order_id'], $r['dc'], $r['qty_delivered'], $r['veh'], $r['delivery_date']];
+            $i++;
+        }
+        break;
+
+    case 'activity':
+        $headers = ['User', 'Action', 'Details', 'Time'];
+        $num_cols = [];
+        $q = $conn->query("SELECT user_name, action, details, created_at FROM activity_log ORDER BY id DESC");
+        $i = 0;
+        while ($r = $q->fetch_assoc()) {
+            if ($sel !== '' && strpos(',' . $sel . ',', ',' . $i . ',') === false) { $i++; continue; }
+            $rows[] = [$r['user_name'], $r['action'], $r['details'], $r['created_at']];
             $i++;
         }
         break;

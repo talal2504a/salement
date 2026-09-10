@@ -82,6 +82,9 @@ body.dark .tag.pending{background:#33220f;color:#F3D9A8;}
                 <a href="activity_log.php" class="nav-item <?php echo $active_page === 'activity' ? 'active' : ''; ?>">
             <span class="dot"></span>Activity Log
         </a>
+        <a href="documents.php" class="nav-item <?php echo $active_page === 'documents' ? 'active' : ''; ?>">
+            <span class="dot"></span>Documents
+        </a>
     </nav>
 
     <!-- USER INFO + LOGOUT + DARK MODE -->
