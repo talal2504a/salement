@@ -2,6 +2,7 @@
 // ajax/save_stock_in.php — Stock IN save (stockin.php ka AJAX target)
 header('Content-Type: application/json');
 require_once '../config/db.php';
+require_once '../includes/activity.php';
 
 $item_id       = intval($_POST['item_id'] ?? 0);
 $fresh_qty     = intval($_POST['fresh_qty'] ?? 0);
@@ -46,6 +47,7 @@ try {
     }
 
     $conn->commit();
+    log_activity($conn, 'STOCK IN', "Item #{$item_id}: {$fresh_qty} fresh + {$damaged_qty} damaged");
     echo json_encode([
         'success' => true,
         'message' => "Stock IN saved: {$fresh_qty} Fresh, {$damaged_qty} Damaged"

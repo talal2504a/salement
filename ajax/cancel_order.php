@@ -3,6 +3,7 @@
 // Stock wapis: fresh/damaged stock_in me insert + order CANCELLED
 header('Content-Type: application/json');
 require_once '../config/db.php';
+require_once '../includes/activity.php';
 
 $order_id    = (int)($_POST['order_id'] ?? 0);
 $fresh_qty   = (int)($_POST['fresh_qty'] ?? 0);
@@ -48,6 +49,7 @@ try {
     $upd->close();
 
     $conn->commit();
+    log_activity($conn, 'ORDER CANCEL', "Order #{$order_id} cancelled, {$fresh_qty} fresh + {$damaged_qty} damaged wapis");
     echo json_encode(['success' => true, 'message' => "Order cancelled. {$fresh_qty} fresh + {$damaged_qty} damaged stock wapis."]);
 } catch (Exception $e) {
     $conn->rollback();

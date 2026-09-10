@@ -296,7 +296,7 @@ function submitDeliverModal() {
 
     const formData = new FormData();
     formData.append('order_id', deliverModalOrderId);
-    formData.append('qty', qty);
+    formData.append('qty_delivered', qty);
     formData.append('delivery_date', d);
     formData.append('dc_no', document.getElementById('modalDcNo').value);
     formData.append('vehicle_no', document.getElementById('modalVehicleNo').value);

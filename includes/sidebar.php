@@ -16,6 +16,44 @@ if (!isset($_SESSION['user_name']) && isset($_SESSION['user_id'])) {
     $stmt->close();
 }
 ?>
+<style>
+body.dark{
+    --bg:#141821;
+    --panel:#1C2333;
+    --panel-2:#262E42;
+    --line:#333D52;
+    --text:#E8EDF5;
+    --muted:#9AA4B8;
+    --amber-dim:#8A6A2F;
+    --green-bg:#1E2E26;
+    --rust-bg:#33221C;
+}
+body.dark, body.dark .app{background:var(--bg);}
+body.dark main{background:var(--bg);}
+body.dark .sidebar{background:#0F121A;}
+body.dark .brand .sub{color:rgba(255,255,255,0.45);}
+body.dark .btn.ghost{color:var(--text);}
+body.dark .field input,body.dark .field select,
+body.dark .log-filter select{background:#141821;color:var(--text);border-color:var(--line);}
+body.dark .cond-toggle label{background:var(--panel-2);color:var(--muted);border-color:var(--line);}
+body.dark .doc-opt:hover,body.dark .doc-group-title:hover{background:var(--panel-2);}
+body.dark .doc-opt.active{color:var(--amber);}
+body.dark .totals-bar{background:#262E42;border-color:var(--amber-dim);color:#E8EDF5;}
+body.dark .totals-bar b{color:var(--amber);}
+body.dark .pd-card .head{background:var(--panel-2);}
+body.dark .item-select{background:var(--panel);}
+body.dark .ledger-summary .box{background:var(--panel);}
+body.dark .modal-box{background:var(--panel);}
+body.dark .modal-box .modal-sub{color:var(--muted);}
+body.dark th{color:var(--muted);}
+body.dark .stat-card .value{color:var(--text);}
+body.dark .panel h3{color:var(--text);}
+body.dark .item-row .name{color:var(--text);}
+body.dark .tag.in-txt{color:var(--green);}
+body.dark .tag.ok{background:var(--green-bg);color:var(--green);}
+body.dark .tag.low{background:var(--rust-bg);color:var(--rust);}
+body.dark .tag.pending{background:#33220f;color:#F3D9A8;}
+</style>
 <div class="sidebar">
     <div class="brand">
         <div class="mark">IM</div>
@@ -41,14 +79,12 @@ if (!isset($_SESSION['user_name']) && isset($_SESSION['user_id'])) {
         <a href="delivery_history.php" class="nav-item <?php echo $active_page === 'history' ? 'active' : ''; ?>">
             <span class="dot"></span>Delivery History
         </a>
-                <a href="documents.php" class="nav-item <?php echo $active_page === 'documents' ? 'active' : ''; ?>">
-            <span class="dot"></span>Documents
+                <a href="activity_log.php" class="nav-item <?php echo $active_page === 'activity' ? 'active' : ''; ?>">
+            <span class="dot"></span>Activity Log
         </a>
     </nav>
 
-    <!-- USER INFO + LOGOUT (project theme ke mutabik) -->
-        <!-- USER INFO -->
-        <!-- USER INFO (inline style - CSS file ki zaroorat nahi) -->
+    <!-- USER INFO + LOGOUT + DARK MODE -->
     <div style="display:flex;align-items:center;gap:10px;padding:14px 20px 0 20px;margin-top:14px;">
         <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;background:#E8A33D;color:#1C2333;display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;">
             <?php echo htmlspecialchars(strtoupper(substr(($_SESSION['user_name'] ?? 'User'), 0, 1))); ?>
@@ -66,5 +102,29 @@ if (!isset($_SESSION['user_name']) && isset($_SESSION['user_id'])) {
             Logout
         </a>
     </div>
+
+    <!-- DARK MODE TOGGLE (logout ke niche) -->
+    <button id="themeToggle" onclick="toggleTheme()" style="display:flex;align-items:center;justify-content:center;gap:7px;width:calc(100% - 40px);padding:7px 12px;border-radius:8px;background:rgba(255,255,255,0.08);color:#fff;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;border:1px solid rgba(255,255,255,0.16);cursor:pointer;margin:8px 20px 0 20px;">
+        <span id="themeIcon">🌙</span><span id="themeLabel">Dark Mode</span>
+    </button>
+
     <div class="sidebar-foot">Inventory App v1</div>
 </div>
+
+<script>
+(function(){
+    if (localStorage.getItem('im_theme') === 'dark') {
+        document.body.classList.add('dark');
+        const i = document.getElementById('themeIcon');
+        const l = document.getElementById('themeLabel');
+        if (i) i.textContent = '☀️';
+        if (l) l.textContent = 'Light Mode';
+    }
+})();
+function toggleTheme(){
+    const isDark = document.body.classList.toggle('dark');
+    localStorage.setItem('im_theme', isDark ? 'dark' : 'light');
+    document.getElementById('themeIcon').textContent = isDark ? '☀️' : '🌙';
+    document.getElementById('themeLabel').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+}
+</script>

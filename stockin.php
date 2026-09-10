@@ -184,7 +184,7 @@ function savePlates() {
     if (!plateName) { alert('Plate name daalo!'); return; }
     if (count <= 0) { alert('Plate count zero hai!'); return; }
 
-    let done = 0;
+       let done = 0;
     for (let i = 1; i <= count; i++) {
         const pName = `${plateName} ${i}`;
         const formData = new FormData();
@@ -200,8 +200,13 @@ function savePlates() {
         .then(data => {
             done++;
             if (done === count) {
-                alert(`${count} plates save ho gaye!`);
-                loadPallets(itemId);
+                fetch('ajax/log_pallet_batch.php', {
+                    method: 'POST',
+                    body: `item_id=${itemId}&plate_name=${encodeURIComponent(plateName)}&count=${count}&qty=${perPlate}`
+                }).then(() => {
+                    alert(`${count} plates save ho gaye!`);
+                    loadPallets(itemId);
+                });
             }
         })
         .catch(err => {
@@ -211,7 +216,6 @@ function savePlates() {
             }
         });
     }
-}
 
 function loadPallets(itemId) {
     fetch(`ajax/get_pallets.php?item_id=${itemId}`)

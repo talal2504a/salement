@@ -86,7 +86,7 @@ DELETE FROM orders WHERE id = ?;
 
 ### 💰 Available Stock Ka Math (SIRF EK - 2026-09-09):
 
-```sql
+```sqls
 Total Stock = SUM(stock_in.qty)
 -- stock_out sirf record hai — LIVE stock stock_in mein reflected hota hai
 ```

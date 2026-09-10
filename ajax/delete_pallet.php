@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once '../config/db.php';
+require_once '../includes/activity.php';
 
 $id = intval($_POST['id'] ?? 0);
 
@@ -12,6 +13,7 @@ if (!$id) {
 $stmt = $conn->prepare("DELETE FROM stock_in WHERE id = ?");
 $stmt->bind_param("i", $id);
 if ($stmt->execute()) {
+    log_activity($conn, 'PALLET DELETE', "Stock_in #{$id} deleted");
     echo json_encode(['success' => true]);
 } else {
     echo json_encode(['success' => false, 'message' => $stmt->error]);

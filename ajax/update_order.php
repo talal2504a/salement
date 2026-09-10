@@ -2,6 +2,7 @@
 // ajax/update_order.php — Full order update (stockout jaisi details: party, item, condition, ref, date)
 header('Content-Type: application/json');
 require_once '../config/db.php';
+require_once '../includes/activity.php';
 
 $order_id       = (int)($_POST['order_id'] ?? 0);
 $party_id       = (int)($_POST['party_id'] ?? 0);
@@ -78,6 +79,7 @@ try {
     $upd2->close();
 
     $conn->commit();
+    log_activity($conn, 'ORDER UPDATE', "Order #{$order_id}: {$new_qty} pcs to {$pname}");
     echo json_encode(['success' => true, 'message' => "Order updated: {$new_qty} pcs, {$plates} plates"]);
 } catch (Exception $e) {
     $conn->rollback();

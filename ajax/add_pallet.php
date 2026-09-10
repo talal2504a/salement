@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once '../config/db.php';
+require_once '../includes/activity.php';
 
 $item_id = intval($_POST['item_id'] ?? 0);
 $pallet_name = trim($_POST['pallet_name'] ?? '');
@@ -28,3 +29,4 @@ if ($stmt->execute()) {
 }
 $stmt->close();
 $conn->close();
+?>

@@ -2,6 +2,7 @@
 // ajax/add_party.php — Add new party
 header('Content-Type: application/json');
 require_once '../config/db.php';
+require_once '../includes/activity.php';
 
 $name     = trim($_POST['name'] ?? '');
 $phone    = trim($_POST['phone'] ?? '');
@@ -28,6 +29,7 @@ $stmt = $conn->prepare(
 );
 $stmt->bind_param("sss", $name, $phone, $address);
 if ($stmt->execute()) {
+    log_activity($conn, 'PARTY ADD', "{$name}, {$phone}");
     echo json_encode(['success' => true, 'message' => 'Party add ho gaya', 'party_id' => $stmt->insert_id]);
 } else {
     echo json_encode(['success' => false, 'message' => 'Error: ' . $stmt->error]);

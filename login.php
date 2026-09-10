@@ -2,6 +2,7 @@
 session_start();
 if (isset($_SESSION['user_id'])) { header("Location: dashboard.php"); exit; }
 include 'config/db.php';
+require_once 'includes/activity.php';
 
 $error = null;
 
@@ -18,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_name'] = $user['name'];
         $_SESSION['user_email'] = $user['email'];
+        log_activity($conn, 'LOGIN', "User {$user['name']} logged in");
         header("Location: dashboard.php");
         exit;
     } else {
@@ -47,6 +49,7 @@ input[type="checkbox"]:checked { background-color: #1C2333; border-color: #1C233
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 antialiased selection:bg-[#E8A33D]/30 selection:text-[#1C2333]">
 <?php include 'includes/loader.php'; ?>
+
   <div class="w-full max-w-[420px]">
 
     <!-- BRAND AT TOP -->

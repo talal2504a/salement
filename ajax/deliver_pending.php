@@ -2,6 +2,7 @@
 // ajax/deliver_pending.php — Deliver pending order (stockout.php)
 header('Content-Type: application/json');
 require_once '../config/db.php';
+require_once '../includes/activity.php';
 
 $order_id = (int)($_POST['order_id'] ?? 0);
 $qty_delivered = (int)($_POST['qty_delivered'] ?? 0);
@@ -53,6 +54,7 @@ try {
     $ins->close();
 
     $conn->commit();
+    log_activity($conn, 'DELIVERY', "Order #{$order_id}: {$qty_delivered} pcs, DC: {$dc_no}, Vehicle: {$vehicle_no}");
     echo json_encode(['success' => true, 'message' => "Delivery saved. {$qty_delivered} pcs dispatched."]);
 } catch (Exception $e) {
     $conn->rollback();

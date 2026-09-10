@@ -2,6 +2,7 @@
 // ajax/save_stock_out.php — Save stock out + plate count
 header('Content-Type: application/json');
 require_once '../config/db.php';
+require_once '../includes/activity.php';
 
 $item_id    = intval($_POST['item_id'] ?? 0);
 $party_id   = intval($_POST['party_id'] ?? 0);
@@ -52,6 +53,13 @@ try {
     $party_name = $pn->get_result()->fetch_assoc()['name'] ?? '';
     $pn->close();
 
+    // Item name fetch karo (activity log ke liye)
+    $in = $conn->prepare("SELECT name FROM items WHERE id = ?");
+    $in->bind_param("i", $item_id);
+    $in->execute();
+    $item_name = $in->get_result()->fetch_assoc()['name'] ?? '';
+    $in->close();
+
     // 2. Orders me PENDING record (pending deliver system saath chale)
     $stmt1 = $conn->prepare(
         "INSERT INTO orders (party_id, item_id, item_condition, booked_qty, dispatched_qty, status, ref_no, order_date)
@@ -72,6 +80,7 @@ try {
     $stmt2->close();
 
     $conn->commit();
+    log_activity($conn, 'STOCK OUT', "Order #{$order_id}: {$qty} pcs / {$plates} plates to {$party_name} ({$item_name}), {$condition}");
     echo json_encode([
         'success' => true,
         'message' => "Sale saved. {$qty} pcs, {$plates} plates.",
