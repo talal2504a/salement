@@ -41,12 +41,16 @@ $new_status = ($new_dispatched >= $order['booked_qty']) ? 'COMPLETED' : 'PARTIAL
 
 $conn->begin_transaction();
 try {
-    $conn->prepare("UPDATE orders SET dispatched_qty = ?, status = ? WHERE id = ?")
-        ->bind_param("isi", $new_dispatched, $new_status, $order_id)->execute();
+    $upd = $conn->prepare("UPDATE orders SET dispatched_qty = ?, status = ? WHERE id = ?");
+    $upd->bind_param("isi", $new_dispatched, $new_status, $order_id);
+    $upd->execute();
+    $upd->close();
 
-    $conn->prepare("INSERT INTO delivery_log (order_id, qty_delivered, dc_no, vehicle_no, notes, delivery_date)
-                    VALUES (?, ?, ?, ?, ?, ?)")
-        ->bind_param("iissss", $order_id, $qty_delivered, $dc_no, $vehicle_no, $notes, $delivery_date)->execute();
+    $ins = $conn->prepare("INSERT INTO delivery_log (order_id, qty_delivered, dc_no, vehicle_no, notes, delivery_date)
+                           VALUES (?, ?, ?, ?, ?, ?)");
+    $ins->bind_param("iissss", $order_id, $qty_delivered, $dc_no, $vehicle_no, $notes, $delivery_date);
+    $ins->execute();
+    $ins->close();
 
     $conn->commit();
     echo json_encode(['success' => true, 'message' => "Delivery saved. {$qty_delivered} pcs dispatched."]);

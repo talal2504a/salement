@@ -24,8 +24,8 @@ if ($stmt->get_result()->fetch_assoc()) {
 }
 $stmt->close();
 
-$stmt = $conn->prepare("INSERT INTO items (name, unit, reorder_level, category) VALUES (?, ?, ?, ?)");
-$stmt->bind_param("ssis", $name, $unit, $reorder, $category);
+$stmt = $conn->prepare("INSERT INTO items (name, category, unit_price) VALUES (?, ?, 0)");
+$stmt->bind_param("ss", $name, $category);
 if ($stmt->execute()) {
     echo json_encode(['success' => true, 'message' => 'Item add ho gaya', 'item_id' => $stmt->insert_id]);
 } else {

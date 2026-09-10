@@ -1,4 +1,9 @@
 <?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
 $active_page = 'stockout';
 ?>
 <!DOCTYPE html>
@@ -11,6 +16,7 @@ $active_page = 'stockout';
 </head>
 <body>
 <div class="app">
+    <?php include 'includes/loader.php'; ?>
     <?php include 'includes/sidebar.php'; ?>
 
     <main>

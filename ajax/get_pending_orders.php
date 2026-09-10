@@ -5,7 +5,7 @@ require_once '../config/db.php';
 
 $party_id = isset($_GET['party_id']) ? (int)$_GET['party_id'] : null;
 
-$sql = "SELECT o.id AS order_id, o.booked_qty, o.dispatched_qty,
+$sql = "SELECT o.id AS order_id, o.item_id AS item_id, o.booked_qty, o.dispatched_qty,
             (o.booked_qty - o.dispatched_qty) AS pending_qty,
             o.status, o.ref_no, o.order_date, o.item_condition,
             i.name AS item_name, i.category,

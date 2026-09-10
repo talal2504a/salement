@@ -1,4 +1,9 @@
 <?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
 $active_page = 'dashboard';
 ?>
 <!DOCTYPE html>
@@ -11,6 +16,7 @@ $active_page = 'dashboard';
 </head>
 <body>
 <div class="app">
+    <?php include 'includes/loader.php'; ?>
     <?php include 'includes/sidebar.php'; ?>
 
     <main>
@@ -21,7 +27,10 @@ $active_page = 'dashboard';
             </div>
         </div>
 
-        <div class="stat-row" id="statRow">
+        <div class="stat-row" style="grid-template-columns:repeat(6,1fr);" id="statRow">
+            <div class="stat-card"><div class="label">Database Size</div><div class="value amber" id="statDbSize" style="font-size:20px;">—</div>
+                <div class="foot"><a href="download_db.php" style="font-size:12px;color:var(--navy);font-weight:600;">Download DB (SQL)</a></div>
+            </div>
             <div class="stat-card"><div class="label">Total Items</div><div class="value" id="statTotalItems">—</div></div>
             <div class="stat-card"><div class="label">Book Stock (Available)</div><div class="value amber" id="statTotalQty">—</div></div>
             <div class="stat-card"><div class="label">Physical Stock (Godown)</div><div class="value" id="statPhysical" style="color:#3B6FA0;">—</div></div>
@@ -54,6 +63,7 @@ $active_page = 'dashboard';
 document.addEventListener('DOMContentLoaded', () => {
     loadSummary();
     loadRecent();
+    loadDbSize();
 });
 
 function loadSummary() {
@@ -96,6 +106,7 @@ function loadSummary() {
         })
         .catch(err => console.error(err));
 }
+
 function loadRecent() {
     fetch('ajax/get_recent_transactions.php')
         .then(res => res.json())
@@ -126,7 +137,7 @@ function loadRecent() {
                             <div class="name">${tx.item_name} — ${tx.type}</div>
                             <div class="meta">${partyText} · ${tx.entry_date}${plateTxt}</div>
                         </div>
-                        <div class="right"><div class="qty ${qtyClass}">${qtySign}${tx.quantity}</div></div>
+                        <div class="right"><div class="qty ${qtyClass}">${qtySign}${tx.qty}</div></div>
                     </div>
                 `;
             });
@@ -134,6 +145,13 @@ function loadRecent() {
         .catch(err => console.error(err));
 }
 
+function loadDbSize() {
+    fetch('ajax/get_db_size.php')
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) document.getElementById('statDbSize').textContent = res.size_txt;
+        });
+}
 </script>
 </body>
 </html>

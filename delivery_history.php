@@ -8,6 +8,11 @@
 // 'get_delivery_history.php' kiya — backend file root mein hai
 // (baaki sab pages bhi root pattern follow karte hain)
 // ============================================================
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
 $active_page = 'history';
 ?>
 <!DOCTYPE html>
@@ -21,6 +26,7 @@ $active_page = 'history';
 </head>
 <body>
 <div class="app">
+    <?php include 'includes/loader.php'; ?>
     <?php include 'includes/sidebar.php'; ?>
 
     <main>

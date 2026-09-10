@@ -1,24 +1,24 @@
 <?php
-// ajax/update_order.php — Order ki booked qty update + plates recalculate
+// ajax/update_order.php — Full order update (stockout jaisi details: party, item, condition, ref, date)
 header('Content-Type: application/json');
 require_once '../config/db.php';
 
-$order_id = (int)($_POST['order_id'] ?? 0);
-$new_qty  = (int)($_POST['booked_qty'] ?? 0);
+$order_id       = (int)($_POST['order_id'] ?? 0);
+$party_id       = (int)($_POST['party_id'] ?? 0);
+$item_id        = (int)($_POST['item_id'] ?? 0);
+$item_condition = strtoupper(trim($_POST['item_condition'] ?? 'FRESH'));
+$new_qty        = (int)($_POST['booked_qty'] ?? 0);
+$plates         = (int)($_POST['plates'] ?? 0);
+$pcs_per_plate  = (int)($_POST['pcs_per_plate'] ?? 36);
+$ref_no         = trim($_POST['ref_no'] ?? '');
+$order_date     = $_POST['order_date'] ?? date('Y-m-d');
 
 if ($order_id <= 0 || $new_qty <= 0) {
     echo json_encode(['success' => false, 'message' => 'Order aur quantity zaroori hai']);
     exit;
 }
 
-// Current order + pcs_per_plate (stock_out se)
-$stmt = $conn->prepare(
-    "SELECT o.item_id, o.booked_qty, o.dispatched_qty, o.status,
-            COALESCE(so.pcs_per_plate, 36) AS pps
-     FROM orders o
-     LEFT JOIN stock_out so ON so.order_id = o.id
-     WHERE o.id = ?"
-);
+$stmt = $conn->prepare("SELECT item_id, booked_qty, dispatched_qty, status FROM orders WHERE id = ?");
 $stmt->bind_param("i", $order_id);
 $stmt->execute();
 $order = $stmt->get_result()->fetch_assoc();
@@ -32,6 +32,10 @@ if ($new_qty < $order['dispatched_qty']) {
     echo json_encode(['success' => false, 'message' => "Booked qty dispatched ({$order['dispatched_qty']}) se kam nahi ho sakti"]);
     exit;
 }
+if ($item_id != $order['item_id'] && $order['dispatched_qty'] > 0) {
+    echo json_encode(['success' => false, 'message' => 'Item change tabhi ho sakta hai jab abhi tak kuch dispatched na hua ho']);
+    exit;
+}
 
 $diff = $new_qty - $order['booked_qty'];
 
@@ -40,7 +44,7 @@ if ($diff > 0) {
         "SELECT COALESCE((SELECT SUM(qty) FROM stock_in WHERE item_id = ?), 0) -
                 COALESCE((SELECT SUM(qty) FROM stock_out WHERE item_id = ? AND order_id <> ?), 0) AS available"
     );
-    $stmt->bind_param("iii", $order['item_id'], $order['item_id'], $order_id);
+    $stmt->bind_param("iii", $item_id, $item_id, $order_id);
     $stmt->execute();
     $available = (int)$stmt->get_result()->fetch_assoc()['available'];
     $stmt->close();
@@ -50,23 +54,31 @@ if ($diff > 0) {
     }
 }
 
-$pps    = ($order['pps'] > 0) ? $order['pps'] : 36;
+$pps    = ($pcs_per_plate > 0) ? $pcs_per_plate : 36;
 $plates = intdiv($new_qty, $pps);
+
+$pname = '';
+$pn = $conn->prepare("SELECT name FROM parties WHERE id = ?");
+$pn->bind_param("i", $party_id);
+$pn->execute();
+$pr = $pn->get_result()->fetch_assoc();
+$pname = $pr['name'] ?? '';
+$pn->close();
 
 $conn->begin_transaction();
 try {
-    $conn->prepare("UPDATE orders SET booked_qty = ? WHERE id = ?")
-        ->bind_param("ii", $new_qty, $order_id)->execute();
+    $upd = $conn->prepare("UPDATE orders SET party_id = ?, item_id = ?, item_condition = ?, booked_qty = ?, ref_no = ?, order_date = ? WHERE id = ?");
+    $upd->bind_param("iisisss", $party_id, $item_id, $item_condition, $new_qty, $ref_no, $order_date, $order_id);
+    $upd->execute();
+    $upd->close();
 
-    if ($diff != 0) {
-        $upd = $conn->prepare("UPDATE stock_out SET qty = ?, plates = ?, pcs_per_plate = ? WHERE order_id = ? AND item_id = ?");
-        $upd->bind_param("iiiii", $new_qty, $plates, $pps, $order_id, $order['item_id']);
-        $upd->execute();
-        $upd->close();
-    }
+    $upd2 = $conn->prepare("UPDATE stock_out SET item_id = ?, qty = ?, plates = ?, pcs_per_plate = ?, item_condition = ?, customer_name = ?, notes = ?, out_date = ? WHERE order_id = ?");
+    $upd2->bind_param("iiiiisssi", $item_id, $new_qty, $plates, $pps, $item_condition, $pname, $ref_no, $order_date, $order_id);
+    $upd2->execute();
+    $upd2->close();
 
     $conn->commit();
-    echo json_encode(['success' => true, 'message' => "Order updated: {$new_qty} booked, {$plates} plates"]);
+    echo json_encode(['success' => true, 'message' => "Order updated: {$new_qty} pcs, {$plates} plates"]);
 } catch (Exception $e) {
     $conn->rollback();
     echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);

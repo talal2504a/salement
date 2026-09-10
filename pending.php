@@ -1,4 +1,9 @@
 <?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
 $active_page = 'pending';
 ?>
 <!DOCTYPE html>
@@ -12,6 +17,7 @@ $active_page = 'pending';
 </head>
 <body>
 <div class="app">
+    <?php include 'includes/loader.php'; ?>
     <?php include 'includes/sidebar.php'; ?>
 
     <main>
@@ -63,41 +69,69 @@ $active_page = 'pending';
     </div>
 </div>
 
-<!-- ============================================================
-     NEW (2026-09-08): UPDATE MODAL — same design as Deliver Modal
-     Pehle Update button prompt() se qty leta tha, ab modal se leta hai.
-     Sirf Booked Qty field hai (Update sirf qty change karta hai,
-     stock_out adjust backend update_order.php mein hota hai)
-     ============================================================ -->
+<!-- UPDATE MODAL: stockout jaisi poori details + database prefill -->
 <div class="modal-overlay" id="updateModal">
     <div class="modal-box">
         <h3>Update Order</h3>
-        <div class="modal-sub" id="updateModalSub">Booked qty: —</div>
+        <div class="modal-sub" id="updateModalSub">Order #—</div>
+        <div class="msg-box" id="updateMsg"></div>
 
         <div class="field">
-            <label>Booked Quantity</label>
-            <input type="number" id="updateModalQty" min="1">
+            <label>Party Name</label>
+            <select id="updatePartySelect"><option>Loading parties...</option></select>
+        </div>
+
+        <div class="field">
+            <label>Item</label>
+            <select id="updateItemSelect"><option>Loading items...</option></select>
+        </div>
+
+        <div class="field">
+            <label>Condition</label>
+            <div class="cond-toggle">
+                <button type="button" class="fresh-on" data-value="FRESH" onclick="selectConditionUpd(this)">Fresh</button>
+                <button type="button" data-value="DAMAGED" onclick="selectConditionUpd(this)">Damaged</button>
+            </div>
+            <input type="hidden" id="updateConditionValue" value="FRESH">
+        </div>
+
+        <div class="field">
+            <label>Quantity</label>
+            <input type="number" id="updateModalQty" min="1" oninput="calcPlateUpd()">
+        </div>
+
+        <div id="updatePlateCalcBox" style="display:none; background:#FAF8F3; border:1px dashed var(--amber); padding:12px; border-radius:8px; margin-bottom:15px;">
+            <div style="font-size:13px; margin-bottom:6px;">Pcs per Plate: <b id="updatePpsLabel">—</b></div>
+            <div style="font-size:16px; font-weight:700; color:var(--navy);">
+                Plate Count: <span id="updatePlateCount">0</span>
+                <span style="font-size:12px; font-weight:400; color:var(--muted);">(baqi: <span id="updateRemainingPcs">0</span> pcs)</span>
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Reference / Invoice No</label>
+            <input type="text" id="updateRefNo" placeholder="e.g. INV-201">
+        </div>
+
+        <div class="field">
+            <label>Date</label>
+            <input type="text" id="updateModalDate" placeholder="e.g. 26-Nov-2026">
         </div>
 
         <div class="modal-actions">
             <button class="btn ghost" onclick="closeUpdateModal()">Cancel</button>
-            <button class="btn amber" onclick="submitUpdateModal()">Save</button>
+            <button class="btn amber" onclick="submitUpdateModal()">Save Update</button>
         </div>
     </div>
 </div>
 
-<!-- ============================================================
-     NEW (2026-09-08): CANCEL MODAL — same design as Deliver/Update Modal
-     Pehle Cancel button confirm() (browser popup) se cancel hota tha
-     Ab same-design modal popup se cancel hoga
-     ============================================================ -->
+<!-- CANCEL MODAL -->
 <div class="modal-overlay" id="cancelModal">
     <div class="modal-box">
         <h3>Cancel Order</h3>
         <div class="modal-sub" id="cancelModalSub">Order # —</div>
 
         <!-- NEW (2026-09-08): Cancel pe stock split inputs -->
-        <!-- Customer ne mana kiya toh stock wapis aata hai - fresh/damaged mein -->
         <div class="field">
             <label>Fresh Qty (theek maal)</label>
             <input type="number" id="cancelFreshQty" min="0" placeholder="e.g. 25">
@@ -119,68 +153,60 @@ $active_page = 'pending';
 
 <script>
 // ============================================================
-// PENDING DELIVERIES PAGE - JavaScript
-// Changes made on 2026-09-08:
-//   Line 66: 'ajax/get_pending_orders.php' → 'get_pending_orders.php'
-//   Line 144: 'ajax/deliver_pending.php' → 'deliver_pending.php'
-//   Line 169: 'ajax/get_delivery_log.php' → 'get_delivery_log.php'
-// NEW (2026-09-08): Update + Cancel buttons add kiye
-//   - Line ~197: Update/Cancel buttons HTML mein add kiye
-//   - Line ~284: updateOrder() — MODAL kholta hai (prompt hat gaya)
-//   - Line ~347: cancelOrder() — MODAL kholta hai (confirm hat gaya)
-//   - Line ~94:  CANCEL MODAL HTML (same design as Deliver/Update modal)
+// PENDING DELIVERIES PAGE - JavaScript (CLEANED VERSION)
 // ============================================================
 
 let deliverModalOrderId = null;
 
-// ============================================================
-// NEW (2026-09-08): Pakistani Date/Time Format helper functions
-// Date "2026-08-26" → "26 Aug-26" (month ka naam, number nahi)
-// Time "14:30:00"  → "2:30 PM" (12-hour format)
-// Sirf DISPLAY ke liye - database mein ISO format hi rehta hai
-// ============================================================
+// Pakistani Date/Time Format helpers (sirf display ke liye)
 function formatDatePK(d) {
     if (!d) return '';
     const parts = d.split('-'); // YYYY-MM-DD
-    if (parts.length !== 3) return d; // format alag hai toh waisa hi wapas
+    if (parts.length !== 3) return d;
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const day = parseInt(parts[2], 10);   // leading zero hatao: 05 → 5
+    const day = parseInt(parts[2], 10);
     const monthName = months[parseInt(parts[1], 10) - 1];
-    const shortYear = parts[0].slice(2);  // 2026 → 26
+    const shortYear = parts[0].slice(2);
     return `${day} ${monthName}-${shortYear}`;
 }
 
 function formatTimePK(t) {
     if (!t) return '';
-    const parts = t.split(':'); // HH:MM:SS ya HH:MM
+    const parts = t.split(':');
     if (parts.length < 2) return t;
     let h = parseInt(parts[0], 10);
     const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12; // 0 → 12, 13 → 1
+    h = h % 12 || 12;
     return `${h}:${parts[1]} ${ampm}`;
 }
 
-// ============================================================
-// NEW (2026-09-08): Date INPUT helpers — month name wala format
-// ============================================================
-// Aaj ki date input format mein: "08-Sep-2026" (modal pre-fill ke liye)
+// Aaj ki date input format mein: "08-Sep-2026"
 function todayPKInput() {
     const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const now = new Date();
     return String(now.getDate()).padStart(2, '0') + '-' + m[now.getMonth()] + '-' + now.getFullYear();
 }
 
-// User ka likha "26-Nov-2026" (ya "26-nov-26" / "26/Nov/2026") → DB format "2026-11-26"
-// Ghalat format ho toh null return karta hai (validation ke liye)
+// DB format "2026-11-26" → "26-Nov-2026" (update modal prefill ke liye)
+function dateISOToPK(iso) {
+    if (!iso) return todayPKInput();
+    const parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return String(parseInt(parts[2], 10)).padStart(2, '0') + '-' + m[parseInt(parts[1], 10) - 1] + '-' + parts[0];
+}
+
+// "26-Nov-2026" → DB format "2026-11-26"
 function datePKToISO(str) {
     if (!str) return null;
     const m = str.trim().match(/^(\d{1,2})[-\/ ]([A-Za-z]{3,})[-\/ ](\d{2,4})$/);
     if (!m) return null;
+    if (str.indexOf('-') > -1 && !/[A-Za-z]{3}/.test(str)) return null; // "2026-11-26" jaisa raw ISO ley nahi (neche convert hota hai)
     const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
     const mi = months.indexOf(m[2].toLowerCase().slice(0, 3));
     if (mi === -1) return null;
     let year = parseInt(m[3], 10);
-    if (year < 100) year += 2000; // "26" → 2026
+    if (year < 100) year += 2000;
     const day = parseInt(m[1], 10);
     if (day < 1 || day > 31) return null;
     return year + '-' + String(mi + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
@@ -189,9 +215,8 @@ function datePKToISO(str) {
 
 document.addEventListener('DOMContentLoaded', loadPending);
 
+// ---------- PENDING LIST ----------
 function loadPending() {
-    // CHANGED: 'ajax/get_pending_orders.php' → 'get_pending_orders.php'
-    // Kyunki ajax/ subfolder exist nahi karta, file root mein hai
     fetch('ajax/get_pending_orders.php')
         .then(res => res.json())
         .then(res => {
@@ -203,15 +228,16 @@ function loadPending() {
                 return;
             }
 
+            window.__orderData = {};
             res.data.forEach(party => {
                 let ordersHtml = '';
                 party.orders.forEach(o => {
+                    window.__orderData[o.order_id] = o;
                     const percent = Math.round((o.dispatched_qty / o.booked_qty) * 100);
                     ordersHtml += `
                         <div class="pd-line">
                             <div>
                                 <div class="l-name">${o.item_name} (${o.item_condition})</div>
-                                <!-- CHANGED (2026-09-08): Booked date Pakistani format mein - formatDatePK() -->
                                 <div class="l-order">Order #${o.order_id} · Booked ${formatDatePK(o.order_date)}
                                     ${o.dispatched_qty > 0 ? `· <button class="link-btn" onclick="toggleHistory(${o.order_id})">History</button>` : ''}
                                 </div>
@@ -224,11 +250,7 @@ function loadPending() {
                             </div>
                             <div class="actions">
                                 <span class="tag pending">${o.pending_qty} Pending</span>
-                                <!-- NEW (2026-09-08): Update aur Cancel buttons add kiye Deliver se pehle -->
-                                <!-- Same design: .pd-line button styles use ho rahe hain -->
-                                <button class="btn-update" onclick="updateOrder(${o.order_id}, ${o.booked_qty})">Update</button>
-                                <!-- NEW (2026-09-08): Cancel button SIRF PENDING orders ke liye -->
-                                <!-- PARTIAL/COMPLETED cancel nahi ho sakte (already deliver ho chuka) -->
+                                <button class="btn-update" onclick="updateOrder(${o.order_id})">Update</button>
                                 ${o.status === 'PENDING' ? `<button class="btn-cancel" onclick="cancelOrder(${o.order_id})">Cancel</button>` : ''}
                                 <button onclick="deliverOrder(${o.order_id}, ${o.pending_qty})">Deliver</button>
                             </div>
@@ -249,16 +271,11 @@ function loadPending() {
         });
 }
 
-// ---- Deliver button: modal open karo ----
+// ---------- DELIVER ----------
 function deliverOrder(orderId, pendingQty) {
     deliverModalOrderId = orderId;
     document.getElementById('deliverModalSub').textContent = `Pending qty: ${pendingQty}`;
     document.getElementById('modalQty').value = pendingQty;
-    // NEW (2026-09-08): Modal khulte hi aaj ki date aur current time pre-fill karo
-    // User chahe toh change kar sakta hai
-    // CHANGED (2026-09-08): ab "08-Sep-2026" format mein pre-fill hota hai (month ka naam)
-    // pehle browser format (2026-09-08) jata tha kyunki type="date" tha
-    const now = new Date(); // time ke liye zaroori
     document.getElementById('modalDate').value = todayPKInput();
     document.getElementById('modalDcNo').value = '';
     document.getElementById('modalVehicleNo').value = '';
@@ -271,52 +288,71 @@ function closeDeliverModal() {
     deliverModalOrderId = null;
 }
 
-// ---- Modal Save: DC no, vehicle no, note ke sath save ----
 function submitDeliverModal() {
-    const qty = document.getElementById('modalQty').value;
-    if (!qty || qty <= 0) { alert('Quantity likhein'); return; }
+    const qty = parseInt(document.getElementById('modalQty').value) || 0;
+    if (qty <= 0) { alert('Sahi quantity likhein'); return; }
+    const d = datePKToISO(document.getElementById('modalDate').value);
+    if (!d) { alert('Date sahi likhein — format: 26-Nov-2026'); return; }
 
     const formData = new FormData();
     formData.append('order_id', deliverModalOrderId);
-    formData.append('qty_delivered', qty);
+    formData.append('qty', qty);
+    formData.append('delivery_date', d);
     formData.append('dc_no', document.getElementById('modalDcNo').value);
     formData.append('vehicle_no', document.getElementById('modalVehicleNo').value);
     formData.append('notes', document.getElementById('modalNotes').value);
-    // CHANGED (2026-09-08): Time REMOVE — ab sirf date bhejte hain
-    // Date "26-Nov-2026" format mein aati hai (text input)
-    // datePKToISO() use DB format (2026-11-26) mein convert karta hai
-    const d = datePKToISO(document.getElementById('modalDate').value);
-    if (!d) { alert('Date sahi likhein — format: 26-Nov-2026'); return; }
-    formData.append('delivery_date', d);
 
-    // CHANGED: 'ajax/deliver_pending.php' → 'deliver_pending.php'
-    // Kyunki ajax/ subfolder exist nahi karta, file root mein hai
     fetch('ajax/deliver_pending.php', { method: 'POST', body: formData })
         .then(res => res.json())
         .then(res => {
+            alert(res.message);
             if (res.success) {
                 closeDeliverModal();
                 loadPending();
-            } else {
-                alert(res.message);
             }
         });
 }
 
-// ============================================================
-// NEW (2026-09-08): Update Modal — order id yahan store hoti hai
-// (Deliver modal ke deliverModalOrderId jaisa hi pattern)
-// CHANGED: prompt() hataya, ab MODAL use hota hai (same design as Deliver)
-// ============================================================
+// ---------- UPDATE ----------
 let updateModalOrderId = null;
+let updateSelectedPps = 36;
 
-// CHANGED (2026-09-08): updateOrder ab prompt() ki jagah MODAL kholta hai
-// (same design as Deliver modal — user ne yehi design manga tha)
-// Modal khulne pe current booked qty pre-filled hoti hai
-function updateOrder(orderId, currentQty) {
+function updateOrder(orderId) {
+    const o = (window.__orderData || {})[orderId];
+    if (!o) { alert('Order data nahi mila'); return; }
+
     updateModalOrderId = orderId;
-    document.getElementById('updateModalSub').textContent = `Booked qty: ${currentQty}`;
-    document.getElementById('updateModalQty').value = currentQty;
+    updateSelectedPps = o.pcs_per_plate || 36;
+
+    document.getElementById('updateModalSub').textContent =
+        `Order #${o.order_id} · ${o.party_name} · ${o.item_name}`;
+    document.getElementById('updateMsg').className = 'msg-box';
+    document.getElementById('updateMsg').textContent = '';
+
+    document.getElementById('updateModalQty').value = o.booked_qty;
+    document.getElementById('updateRefNo').value = o.ref_no || '';
+    document.getElementById('updateModalDate').value = dateISOToPK(o.order_date);
+
+    loadPartiesUpd(function () {
+        const ps = document.getElementById('updatePartySelect');
+        Array.from(ps.options).forEach(opt => { if (parseInt(opt.value) === o.party_id) ps.value = opt.value; });
+    });
+    loadItemsUpd(function () {
+        const is = document.getElementById('updateItemSelect');
+        Array.from(is.options).forEach(opt => { if (parseInt(opt.value) === o.item_id) is.value = opt.value; });
+        updateSelectedPps = o.pcs_per_plate || 36;
+        document.getElementById('updatePpsLabel').textContent = updateSelectedPps;
+        document.getElementById('updateModalQty').value = o.booked_qty;
+        calcPlateUpd();
+    });
+
+    const cond = (o.item_condition || 'FRESH').toUpperCase();
+    document.getElementById('updateConditionValue').value = cond;
+    document.querySelectorAll('#updateModal .cond-toggle button').forEach(b => {
+        b.classList.remove('fresh-on', 'dmg-on');
+        if (b.dataset.value === cond) b.classList.add(cond === 'FRESH' ? 'fresh-on' : 'dmg-on');
+    });
+
     document.getElementById('updateModal').classList.add('open');
 }
 
@@ -325,41 +361,101 @@ function closeUpdateModal() {
     updateModalOrderId = null;
 }
 
-// Modal Save button: nayi qty lo aur update_order.php ko bhejo
-// Backend (update_order.php) khud stock_out adjust karta hai:
-//   - qty barhao  → available check karke extra kata jata hai
-//   - qty ghatao  → farq stock wapis restore hota hai
-function submitUpdateModal() {
-    const newQty = document.getElementById('updateModalQty').value;
+function loadPartiesUpd(cb) {
+    fetch('ajax/get_parties.php')
+        .then(res => res.json())
+        .then(res => {
+            const sel = document.getElementById('updatePartySelect');
+            sel.innerHTML = '';
+            res.data.forEach(p => {
+                sel.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            });
+            if (cb) cb();
+        });
+}
 
-    // Validation — pehle frontend pe (backend pe bhi hai)
-    if (!newQty || newQty <= 0) { alert('Sahi quantity likhein'); return; }
+function loadItemsUpd(cb) {
+    fetch('ajax/get_items.php')
+        .then(res => res.json())
+        .then(res => {
+            const sel = document.getElementById('updateItemSelect');
+            sel.innerHTML = '<option value="">-- Select Item --</option>';
+            res.data.forEach(item => {
+                sel.innerHTML += `<option value="${item.id}" data-pps="${item.pcs_per_plate}">${item.name}</option>`;
+            });
+            if (cb) cb();
+        });
+}
+
+document.getElementById('updateItemSelect').addEventListener('change', function () {
+    const opt = this.options[this.selectedIndex];
+    updateSelectedPps = parseInt(opt.getAttribute('data-pps')) || 36;
+    document.getElementById('updatePpsLabel').textContent = updateSelectedPps;
+    calcPlateUpd();
+});
+
+function selectConditionUpd(btn) {
+    document.querySelectorAll('#updateModal .cond-toggle button').forEach(b => b.classList.remove('fresh-on', 'dmg-on'));
+    const val = btn.dataset.value;
+    btn.classList.add(val === 'FRESH' ? 'fresh-on' : 'dmg-on');
+    document.getElementById('updateConditionValue').value = val;
+}
+
+function calcPlateUpd() {
+    const qty = parseInt(document.getElementById('updateModalQty').value) || 0;
+    const box = document.getElementById('updatePlateCalcBox');
+    if (qty > 0 && updateSelectedPps > 0) {
+        box.style.display = 'block';
+        document.getElementById('updatePlateCount').textContent = Math.floor(qty / updateSelectedPps);
+        document.getElementById('updateRemainingPcs').textContent = qty % updateSelectedPps;
+    } else {
+        box.style.display = 'none';
+    }
+}
+
+function submitUpdateModal() {
+    const newQty = parseInt(document.getElementById('updateModalQty').value) || 0;
+    const partyId = document.getElementById('updatePartySelect').value;
+    const itemId = document.getElementById('updateItemSelect').value;
+    if (newQty <= 0) { alert('Sahi quantity likhein'); return; }
+    if (!partyId) { alert('Party select karein'); return; }
+    if (!itemId) { alert('Item select karein'); return; }
+
+    const plates = parseInt(document.getElementById('updatePlateCount').textContent) || 0;
+    const d = datePKToISO(document.getElementById('updateModalDate').value);
+    if (!d) { alert('Date sahi likhein — format: 26-Nov-2026'); return; }
 
     const formData = new FormData();
     formData.append('order_id', updateModalOrderId);
+    formData.append('party_id', partyId);
+    formData.append('item_id', itemId);
+    formData.append('item_condition', document.getElementById('updateConditionValue').value);
     formData.append('booked_qty', newQty);
+    formData.append('plates', plates);
+    formData.append('pcs_per_plate', updateSelectedPps);
+    formData.append('ref_no', document.getElementById('updateRefNo').value);
+    formData.append('order_date', d);
 
     fetch('ajax/update_order.php', { method: 'POST', body: formData })
         .then(res => res.json())
         .then(res => {
-            alert(res.message);
             if (res.success) {
                 closeUpdateModal();
-                loadPending(); // List refresh karo
+                loadPending();
+                alert(res.message);
+            } else {
+                document.getElementById('updateMsg').textContent = res.message;
+                document.getElementById('updateMsg').className = 'msg-box error';
             }
         });
 }
 
-// ============================================================
-// NEW (2026-09-08): Cancel Modal — order id yahan store hoti hai
+// ---------- CANCEL ----------
 let cancelModalOrderId = null;
 
-// CHANGED (2026-09-08): cancelOrder ab confirm() ki jagah MODAL kholta hai
-// (same design as Deliver/Update modal — browser popup hat gaya)
 function cancelOrder(orderId) {
     cancelModalOrderId = orderId;
     document.getElementById('cancelModalSub').textContent = `Order #${orderId}`;
-    // NEW (2026-09-08): Reset qty inputs when modal opens
     document.getElementById('cancelFreshQty').value = '';
     document.getElementById('cancelDamagedQty').value = '';
     document.getElementById('cancelTotalWapis').textContent = '0';
@@ -367,15 +463,10 @@ function cancelOrder(orderId) {
 }
 
 function closeCancelModal() {
-    // FIXED (2026-09-08): 'remove('open')' → 'classList.remove('open')'
-    // Pehle .remove() poori modal div DOM se hata deta tha (element.remove()),
-    // isliye modal band hone ke baad dobara Cancel kaam nahi karta tha.
-    // Ab sirf 'open' class hatati hai — modal DOM mein rehta hai, sirf chhup jata hai.
     document.getElementById('cancelModal').classList.remove('open');
     cancelModalOrderId = null;
 }
 
-// NEW (2026-09-08): Fresh + Damaged total calculate karo (live)
 document.addEventListener('DOMContentLoaded', () => {
     const freshInput = document.getElementById('cancelFreshQty');
     const damagedInput = document.getElementById('cancelDamagedQty');
@@ -391,13 +482,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Modal "Haan, Cancel Karo" button: cancel_order.php ko AJAX call
-// Backend (cancel_order.php) stock_in mein fresh/damaged insert + order delete
 function submitCancelModal() {
     const freshQty = parseInt(document.getElementById('cancelFreshQty').value) || 0;
     const damagedQty = parseInt(document.getElementById('cancelDamagedQty').value) || 0;
-
-    // Validation: total 0 nahi ho sakta
     if (freshQty + damagedQty <= 0) {
         alert('Fresh ya Damaged qty likho (total 0 nahi ho sakta)');
         return;
@@ -414,12 +501,12 @@ function submitCancelModal() {
             alert(res.message);
             if (res.success) {
                 closeCancelModal();
-                loadPending(); // List refresh karo
+                loadPending();
             }
         });
 }
 
-// ---- History toggle: DC no, vehicle no, date, qty dikhata hai ----
+// ---------- HISTORY ----------
 function toggleHistory(orderId) {
     const box = document.getElementById('history-' + orderId);
     const isOpen = box.classList.contains('open');
@@ -432,9 +519,7 @@ function toggleHistory(orderId) {
     box.innerHTML = 'Loading...';
     box.classList.add('open');
 
-    // CHANGED: 'ajax/get_delivery_log.php' → 'get_delivery_log.php'
-    // Kyunki ajax/ subfolder exist nahi karta, file root mein hai
-   fetch('ajax/get_delivery_log.php?order_id=' + orderId)
+    fetch('ajax/get_delivery_log.php?order_id=' + orderId)
         .then(res => res.json())
         .then(res => {
             if (!res.success || res.data.length === 0) {
@@ -448,8 +533,6 @@ function toggleHistory(orderId) {
                         ${d.vehicle_no ? ' · ' + d.vehicle_no : ''}
                         ${d.notes ? ' · ' + d.notes : ''}
                     </div>
-                    <!-- CHANGED (2026-09-08): Date ke saath time bhi dikhata hai ab -->
-                    <!-- CHANGED (2026-09-08): Pakistani format - "26 Aug-26 · 2:30 PM" -->
                     <div class="h-meta">${formatDatePK(d.delivery_date)}</div>
                 </div>
             `).join('');

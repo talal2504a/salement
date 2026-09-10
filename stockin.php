@@ -1,4 +1,9 @@
 <?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
 $active_page = 'stockin';
 require_once 'config/db.php';
 ?>
@@ -12,6 +17,7 @@ require_once 'config/db.php';
 </head>
 <body>
 <div class="app">
+    <?php include 'includes/loader.php'; ?>
     <?php include 'includes/sidebar.php'; ?>
 
     <main>

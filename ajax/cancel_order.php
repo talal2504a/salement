@@ -29,22 +29,28 @@ $notes = 'Cancel return Order #' . $order_id;
 $conn->begin_transaction();
 try {
     if ($fresh_qty > 0) {
-        $conn->prepare("INSERT INTO stock_in (item_id, qty, supplier, in_date, `condition`, notes)
-                        VALUES (?, ?, 'CANCEL', NOW(), 'fresh', ?)")
-            ->bind_param("iis", $order['item_id'], $fresh_qty, $notes)->execute();
+        $ins = $conn->prepare("INSERT INTO stock_in (item_id, qty, supplier, in_date, `condition`, notes)
+                               VALUES (?, ?, 'CANCEL', NOW(), 'fresh', ?)");
+        $ins->bind_param("iis", $order['item_id'], $fresh_qty, $notes);
+        $ins->execute();
+        $ins->close();
     }
     if ($damaged_qty > 0) {
-        $conn->prepare("INSERT INTO stock_in (item_id, qty, supplier, in_date, `condition`, notes)
-                        VALUES (?, ?, 'CANCEL', NOW(), 'damaged', ?)")
-            ->bind_param("iis", $order['item_id'], $damaged_qty, $notes)->execute();
+        $ins = $conn->prepare("INSERT INTO stock_in (item_id, qty, supplier, in_date, `condition`, notes)
+                               VALUES (?, ?, 'CANCEL', NOW(), 'damaged', ?)");
+        $ins->bind_param("iis", $order['item_id'], $damaged_qty, $notes);
+        $ins->execute();
+        $ins->close();
     }
-    $conn->prepare("UPDATE orders SET status = 'CANCELLED' WHERE id = ?")
-        ->bind_param("i", $order_id)->execute();
+    $upd = $conn->prepare("UPDATE orders SET status = 'CANCELLED' WHERE id = ?");
+    $upd->bind_param("i", $order_id);
+    $upd->execute();
+    $upd->close();
 
     $conn->commit();
     echo json_encode(['success' => true, 'message' => "Order cancelled. {$fresh_qty} fresh + {$damaged_qty} damaged stock wapis."]);
 } catch (Exception $e) {
-      $conn->rollback();
+    $conn->rollback();
     echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
 }
 $conn->close();
