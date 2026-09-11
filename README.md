@@ -1,6 +1,6 @@
 # Inventory Management System — Solar Stock Control
 
-Full-stack inventory app: stock in/out, pallet management, pending deliveries, sales, activity log, documents export (Excel/Word), and user authentication.
+Full-stack inventory app: stock in/out, pallet management, pending deliveries, sales, activity log, documents export (Excel/Word), file-to-stock upload (Excel/CSV/DOCX), and user authentication.
 
 **Database:** `pendingwithsarim` | **Stack:** PHP (native), MySQL, vanilla JS + CSS
 
@@ -28,7 +28,7 @@ Password: admin123
 ```
 login.php ──→ dashboard.php ──→ (sidebar)
                     │
-                    ├── stockin.php          Stock IN (fresh/damaged + pallets)
+                    ├── stockin.php          Stock IN (fresh/damaged + pallets + file upload)
                     ├── stockout.php         Stock OUT (sale → creates PENDING order)
                     ├── item_ledger.php      Per-item in/out balance
                     ├── pending.php          Pending deliveries (Deliver/Update/Cancel)
@@ -47,6 +47,7 @@ Stock OUT → stock_out table INSERT  + orders table INSERT (status PENDING)
 Delivery  → delivery_log INSERT + orders.dispatched_qty += qty  (stock dobara NAHI kat-ta)
 Update    → booked_qty change; available stock check; status auto (PENDING/PARTIAL/COMPLETED)
 Cancel    → stock_in wapis (fresh/damaged) + order CANCELLED
+File Upload → scan Excel/CSV/DOCX → tick columns → auto-create items + stock_in rows (supplier='FILE UPLOAD')
 ```
 
 ---
@@ -169,6 +170,8 @@ pending/
 │   ├── get_item_summary.php / get_recent_transactions.php
 │   ├── get_delivery_log.php / get_delivery_history.php / get_db_size.php
 │   └── get_report_data.php   # documents page data (9 reports incl. activity)
+│   ├── upload_stock_file.php # scan/import Excel/CSV/DOCX columns (role auto-detect)
+│   └── confirm_stock_upload.php # confirm → create items + insert stock_in rows
 ├── login.php / register.php / forgot_password.php / reset_password.php
 ├── dashboard.php / stockin.php / stockout.php / item_ledger.php
 ├── pending.php / delivery_history.php / activity_log.php / documents.php
@@ -176,7 +179,9 @@ pending/
 ├── export_word.php           # Word (.doc) — 9 reports
 ├── download_db.php           # DB dump download
 ├── setup_database.php / reset_database.php   # 🔴 remove after live setup
-└── lib/PHPMailer/*           # forgot-password email lib
+└── lib/
+    ├── PHPMailer/*           # forgot-password email lib
+    └── SimpleXLSX.php        # .xlsx parser (no composer needed)
 ```
 
 ---
@@ -204,6 +209,39 @@ pending/
 - Toggle JS + CSS in `includes/sidebar.php` `<style>` block
 - Preference saved in `localStorage['im_theme']`
 - Tag/table colors are dark-aware (light shades in dark mode)
+
+---
+
+## 📤 File-to-Stock Upload (stockin.php)
+
+Upload Excel (.xlsx) / CSV / Word (.docx) file → auto-create items + insert stock rows.
+
+### Flow
+```
+Select file → 📄 Scan Columns → tick columns → 🚀 Upload & Preview → ✅ Confirm
+```
+
+### Supported Columns (auto-detected by header name)
+| Column Header | Role |
+|---|---|
+| item / product / name / description | → Item |
+| fresh / good / ok | → Fresh stock qty |
+| damage / dmg / broken / bad | → Damage stock qty |
+| watt / power / w | → Wattage (merged into item name as `580W`) |
+| sr / srno / serial / no / s# | → Skip |
+| anything else | → ignored |
+
+### Wattage Merge Rules
+- Number **not** in name → appends `580W` → `Jinko Bifacial 580W`
+- Number **already** in name → adds `W` directly → `jinko 580 bifacial 580W`
+- Already has `W` → no change
+
+### Key Files
+| File | Purpose |
+|---|---|
+| `ajax/upload_stock_file.php` | Scan/import API (role auto-detect) |
+| `ajax/confirm_stock_upload.php` | Confirm → DB insert (item + stock_in) |
+| `lib/SimpleXLSX.php` | .xlsx parser (single file, no composer) |
 
 ---
 
