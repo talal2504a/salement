@@ -94,7 +94,6 @@ require_once 'config/db.php';
                         <h4 style="font-size:13px; margin:0 0 10px 0; font-weight:600; color:var(--muted); text-transform:uppercase;">
                             📋 Saved Plates — <span id="selectedItemName"></span>
                         </h4>
-                        
                         <div id="palletList"></div>
                     </div>
 
@@ -110,6 +109,41 @@ require_once 'config/db.php';
 
                     <button type="submit" class="btn amber" style="width:100%;">Save Entry</button>
                 </form>
+                <!-- ===== FILE UPLOAD SECTION ===== -->
+                <div style="margin-top:30px; padding-top:20px; border-top:2px dashed var(--line);">
+                    <h4 style="font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; margin:0 0 15px 0;">
+                        📥 Excel/CSV/DOCX se Stock Add
+                    </h4>
+
+                    <div class="field">
+                        <label>Upload Excel (.xlsx / .xls), CSV ya .docx</label>
+                        <input type="file" id="stockFile" accept=".xlsx,.xls,.csv,.docx"
+                            style="padding:10px; border:1px dashed var(--line); border-radius:8px; width:100%; font-size:12px;">
+                    </div>
+
+                    <button type="button" class="btn ghost" style="width:100%; margin-top:10px;"
+                            onclick="scanFile()">📄 Scan Columns</button>
+
+                    <!-- COLUMN TICK PANEL -->
+                    <div id="colPanel" style="display:none; margin-top:15px; padding:12px; border:1px dashed var(--line); border-radius:8px;">
+                        <div style="font-size:13px; font-weight:600; margin-bottom:8px;">📋 File me ye columns mile:</div>
+                        <div id="colList"></div>
+                        <div id="colInfo" style="font-size:11px; color:var(--muted); margin-top:6px;"></div>
+                        <button type="button" class="btn amber" style="width:100%; margin-top:10px;"
+                                onclick="uploadSel()">🚀 Upload & Preview</button>
+                    </div>
+
+                    <!-- PREVIEW -->
+                    <div id="uploadPreview" style="display:none; margin-top:15px;">
+                        <table>
+                            <tr><th>SR</th><th>Item</th><th>Fresh</th><th>Damage</th></tr>
+                            <tbody id="previewBody"></tbody>
+                        </table>
+                        <div style="text-align:center; font-size:12px; color:var(--muted); margin:8px 0;" id="previewCount"></div>
+                        <button type="button" class="btn amber" style="width:100%; margin-top:5px;"
+                                onclick="confirmUpload()">✅ Confirm — Stock Add</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -138,7 +172,7 @@ function loadItems() {
 document.getElementById('itemSelect').addEventListener('change', function () {
     const val = this.value;
     document.getElementById('newItemBox').style.display = (val === '__new__') ? 'block' : 'none';
-    
+
     if (val && val !== '__new__') {
         const selectedOption = this.options[this.selectedIndex];
         const itemName = selectedOption.getAttribute('data-name');
@@ -184,7 +218,7 @@ function savePlates() {
     if (!plateName) { alert('Plate name daalo!'); return; }
     if (count <= 0) { alert('Plate count zero hai!'); return; }
 
-       let done = 0;
+    let done = 0;
     for (let i = 1; i <= count; i++) {
         const pName = `${plateName} ${i}`;
         const formData = new FormData();
@@ -216,6 +250,7 @@ function savePlates() {
             }
         });
     }
+}
 
 function loadPallets(itemId) {
     fetch(`ajax/get_pallets.php?item_id=${itemId}`)
@@ -233,7 +268,7 @@ function loadPallets(itemId) {
                             </span>
                             <span style="display:flex; align-items:center; gap:8px;">
                                 <span style="font-weight:600; font-family:'Sora',sans-serif;">Qty: ${p.quantity}</span>
-                                <button onclick="deletePallet(${p.id})" 
+                                <button onclick="deletePallet(${p.id})"
                                         style="background:none; border:none; color:var(--rust); cursor:pointer; font-size:13px;">✕</button>
                             </span>
                         </div>`;
@@ -289,6 +324,141 @@ function saveNewItem() {
         });
 }
 
+// ===== FILE UPLOAD — Scan Columns =====
+let __fileCache = null;
+
+function scanFile() {
+    const file = document.getElementById('stockFile').files[0];
+    if (!file) { alert('Pehle file chuno!'); return; }
+
+    const allowed = ['xlsx', 'xls', 'csv', 'docx'];
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) { alert('Sirf .xlsx / .xls / .csv / .docx chalegi!'); return; }
+
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('mode', 'scan');
+
+    document.getElementById('colPanel').style.display = 'none';
+    document.getElementById('uploadPreview').style.display = 'none';
+
+    fetch('ajax/upload_stock_file.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(r => {
+            if (!r.success) { alert('Error: ' + r.message); return; }
+
+            __fileCache = { file: file, columns: r.columns, ext: ext };
+
+            const roles = r.roles || {};
+            const skip  = r.skip || [];
+            const roleLabel = { item: '→ Item', fresh: '→ Fresh', damage: '→ Damage', wattage: '→ Item (Watt)' };
+
+            const box = document.getElementById('colList');
+            box.innerHTML = '';
+
+            r.columns.forEach((c, i) => {
+                if (!c || !c.trim()) return;
+
+                // role nikal lo
+                let label = '';
+                let isRole = false;
+                for (const role of ['item', 'fresh', 'damage', 'wattage']) {
+                    if (roles[role] === i) { label = roleLabel[role]; isRole = true; }
+                }
+                if (skip.includes(i)) {
+                    label = '→ Skip (SR.No)';
+                    isRole = false;
+                }
+
+                box.innerHTML += `
+                    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;">
+                        <input type="checkbox" value="${i}" ${isRole ? 'checked' : ''} class="colChk">
+                        <b>${c}</b>
+                        <span style="color:var(--muted);font-size:11px;">${label}</span>
+                    </label>`;
+            });
+
+            document.getElementById('colInfo').textContent =
+                'Total rows: ' + r.total + ' — tick wale columns import honge. (→) wale automatically detect hue hain.';
+            document.getElementById('colPanel').style.display = 'block';
+        })
+        .catch(err => alert('Network error: ' + err));
+}
+
+// ===== FILE UPLOAD — Import ticked columns =====
+function uploadSel() {
+    if (!__fileCache) { alert('Pehle Scan karo!'); return; }
+
+    const checks = Array.from(document.querySelectorAll('.colChk'));
+    const cols = [];
+    checks.forEach(ch => { if (ch.checked) cols.push(__fileCache.columns[parseInt(ch.value)]); });
+
+    if (!cols.length) { alert('Kam se kam 1 column tick karo!'); return; }
+
+    const fd = new FormData();
+    fd.append('file', __fileCache.file);
+    fd.append('mode', 'import');
+    fd.append('cols', JSON.stringify(cols));
+
+    document.getElementById('uploadPreview').style.display = 'block';
+    document.getElementById('previewBody').innerHTML =
+        '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+
+    fetch('ajax/upload_stock_file.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(r => {
+            if (!r.success) { alert('Error: ' + r.message); return; }
+
+            window.__uploadData = r.data;
+            const tbody = document.getElementById('previewBody');
+            tbody.innerHTML = '';
+
+            r.data.forEach((row, i) => {
+                tbody.innerHTML += `<tr>
+                    <td>${i + 1}</td>
+                    <td style="font-weight:600;">${row.item}</td>
+                    <td style="color:#2F6B3A;">${row.fresh}</td>
+                    <td style="color:#BD5B3D;">${row.damage}</td>
+                </tr>`;
+            });
+
+            document.getElementById('previewCount').textContent =
+                r.total + ' rows ready to add';
+        })
+        .catch(err => alert('Network error: ' + err));
+}
+
+// ===== FILE UPLOAD — Confirm =====
+function confirmUpload() {
+    const rows = window.__uploadData;
+    if (!rows || !rows.length) { alert('Pehle Upload & Preview karo!'); return; }
+
+    const valid = rows.filter(r => r.item && (r.fresh > 0 || r.damage > 0));
+    if (!valid.length) { alert('Koi valid row nahi (fresh/damage 0 hai)'); return; }
+
+    if (!confirm(valid.length + ' rows — stock me add ho jayen?')) return;
+
+    const fd = new FormData();
+    fd.append('rows', JSON.stringify(valid));
+
+    document.getElementById('previewBody').innerHTML =
+        '<tr><td colspan="4" style="text-align:center;">Adding...</td></tr>';
+
+    fetch('ajax/confirm_stock_upload.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(r => {
+            if (r.success) {
+                alert(r.message);
+                document.getElementById('uploadPreview').style.display = 'none';
+                window.__uploadData = null;
+                loadItems();
+            } else {
+                alert('Error: ' + r.message);
+            }
+        });
+}
+
+// ---- STOCK IN FORM SUBMIT ----
 document.getElementById('stockInForm').addEventListener('submit', function (e) {
     e.preventDefault();
 
